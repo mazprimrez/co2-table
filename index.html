@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>CO2 Table — Breath-Hold Trainer</title>
+<style>
+  :root {
+    --bg: #fff2f6;
+    --bg2: #ffe1ec;
+    --panel: #ffffff;
+    --panel-border: #f6c9da;
+    --text: #5a2740;
+    --muted: #b17c92;
+    --accent: #ef7fa8;
+    --accent-dim: #d85b8a;
+    --rest: #f0a8c4;
+    --hold: #d94f80;
+    --done: #b15b91;
+    --danger: #d1495b;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: radial-gradient(ellipse at top, var(--bg2), var(--bg) 70%);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #app {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 40px;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    margin: 0 0 4px;
+  }
+  header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 480px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  /* Setup form */
+  .field {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--panel-border);
+    gap: 12px;
+  }
+  .field:last-child { border-bottom: none; }
+  .field label {
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .field .value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    min-width: 64px;
+    text-align: right;
+  }
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .stepper button {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--panel-border);
+    background: var(--bg2);
+    color: var(--text);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .stepper button:active { background: var(--accent-dim); }
+
+  select {
+    background: var(--bg2);
+    color: var(--text);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 14px;
+    width: 100%;
+  }
+
+  .summary {
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    margin: 6px 0 2px;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    max-width: 480px;
+  }
+  button.primary {
+    flex: 1;
+    background: linear-gradient(180deg, var(--accent), var(--accent-dim));
+    color: #fff6fa;
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(217, 79, 128, 0.25);
+  }
+  button.secondary {
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* Session view */
+  #session { display: none; width: 100%; max-width: 480px; flex-direction: column; align-items: center; }
+  #session.active { display: flex; }
+  #setupView.hidden { display: none; }
+
+  .round-indicator {
+    font-size: 14px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .phase-label {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    transition: color 0.3s;
+  }
+  .phase-label.rest { color: var(--rest); }
+  .phase-label.hold { color: var(--hold); }
+  .phase-label.done { color: var(--done); }
+
+  .ring-wrap {
+    position: relative;
+    width: 260px;
+    height: 260px;
+    margin: 12px 0 20px;
+  }
+  .ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--panel-border); stroke-width: 10; }
+  .ring-fg { fill: none; stroke: var(--accent); stroke-width: 10; stroke-linecap: round; transition: stroke 0.3s; }
+  .ring-fg.rest { stroke: var(--rest); }
+  .ring-fg.hold { stroke: var(--hold); }
+
+  .time-display {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 56px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .next-up {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 20px;
+    min-height: 16px;
+  }
+
+  .session-controls {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .progress-dots {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--panel-border);
+  }
+  .dot.filled { background: var(--accent); }
+  .dot.current { background: var(--hold); box-shadow: 0 0 0 3px rgba(217,79,128,0.25); }
+
+  .contraction-btn {
+    display: none;
+    background: var(--bg2);
+    color: var(--hold);
+    border: 1.5px dashed var(--hold);
+    border-radius: 12px;
+    padding: 12px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 16px;
+    width: 100%;
+    max-width: 320px;
+  }
+  .contraction-btn.logged {
+    border-style: solid;
+    background: rgba(217, 79, 128, 0.12);
+  }
+
+  .stop-hold-btn {
+    display: none;
+    background: var(--danger);
+    color: #fff6f6;
+    border: none;
+    border-radius: 12px;
+    padding: 13px 18px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 12px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 4px 14px rgba(209, 73, 91, 0.3);
+  }
+  .stop-hold-btn:active { opacity: 0.85; }
+
+  #summaryView { display: none; width: 100%; }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .stat-box {
+    background: var(--bg2);
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-box .num {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--hold);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-box .lbl {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+  }
+  table.round-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+  table.round-table th {
+    text-align: left;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+  table.round-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--panel-border);
+    font-variant-numeric: tabular-nums;
+  }
+  table.round-table tr:last-child td { border-bottom: none; }
+
+  footer {
+    margin-top: 24px;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    max-width: 480px;
+  }
+
+  @media (max-width: 380px) {
+    .ring-wrap { width: 220px; height: 220px; }
+    .time-display { font-size: 46px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>CO2 Table</h1>
+    <p>Breath-hold CO2 tolerance trainer</p>
+  </header>
+
+  <div id="setupView" class="card">
+    <div class="field">
+      <label for="preset">Preset</label>
+      <select id="preset">
+        <option value="custom">Custom</option>
+        <option value="beginner">Beginner — 1:30 hold</option>
+        <option value="intermediate" selected>Intermediate — 2:00 hold</option>
+        <option value="advanced">Advanced — 2:30 hold</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Rounds</label>
+      <div class="stepper">
+        <button type="button" data-adj="rounds" data-delta="-1">−</button>
+        <span class="value" id="roundsVal">8</span>
+        <button type="button" data-adj="rounds" data-delta="1">+</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Breath hold</label>
+      <div class="stepper">
+        <button type="button" data-adj="hold" data-delta="-15">−</button>
+        <span class="value" id="holdVal">2:00</span>
+        <button type="button" data-adj="hold" data-delta="15">+</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Starting rest</label>
+      <div class="stepper">
+        <button type="button" data-adj="rest" data-delta="-15">−</button>
+        <span class="value" id="restVal">2:00</span>
+        <button type="button" data-adj="rest" data-delta="15">+</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Rest step-down</label>
+      <div class="stepper">
+        <button type="button" data-adj="step" data-delta="-5">−</button>
+        <span class="value" id="stepVal">15s</span>
+        <button type="button" data-adj="step" data-delta="5">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary" id="summary"></div>
+  <div style="height:14px"></div>
+
+  <div class="btn-row">
+    <button class="primary" id="startBtn">Start Session</button>
+  </div>
+
+  <div id="session">
+    <div id="liveArea" style="display:flex; flex-direction:column; align-items:center; width:100%;">
+      <div class="round-indicator" id="roundIndicator">Round 1 / 8</div>
+      <div class="progress-dots" id="progressDots"></div>
+      <div class="phase-label rest" id="phaseLabel">Get Ready</div>
+      <div class="ring-wrap">
+        <svg viewBox="0 0 120 120">
+          <circle class="ring-bg" cx="60" cy="60" r="52"></circle>
+          <circle class="ring-fg rest" id="ringFg" cx="60" cy="60" r="52" stroke-dasharray="326.7" stroke-dashoffset="0"></circle>
+        </svg>
+        <div class="time-display" id="timeDisplay">0:03</div>
+      </div>
+      <button type="button" class="contraction-btn" id="contractionBtn">Log contraction start (or press space)</button>
+      <button type="button" class="stop-hold-btn" id="stopHoldBtn">Can't hold any longer — stop</button>
+      <div class="next-up" id="nextUp"></div>
+      <div class="session-controls">
+        <button class="secondary" id="pauseBtn">Pause</button>
+        <button class="secondary" id="stopBtn">End</button>
+      </div>
+    </div>
+
+    <div id="summaryView" class="card">
+      <h2 style="margin:0 0 14px; font-size:18px;">Session Summary</h2>
+      <div class="stat-grid" id="statGrid"></div>
+      <table class="round-table" id="roundTable"></table>
+    </div>
+    <div class="btn-row" id="summaryBtnRow" style="display:none;">
+      <button class="primary" id="newSessionBtn">New Session</button>
+    </div>
+  </div>
+
+  <footer>
+    Rest phases count down in light pink, breath holds in rose. Sound cues mark 30s and 10s remaining, the final 3 seconds, and every phase change. Tap "Log contraction start" (or press Space) the moment you feel your first diaphragm contraction during a hold. If you can't hold any longer, tap "stop" — it ends the hold immediately and moves you into rest. Keep this tab in the foreground for accurate timing.
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const state = {
+    rounds: 8,
+    hold: 120,
+    rest: 120,
+    step: 15,
+  };
+
+  const presets = {
+    beginner:     { rounds: 8, hold: 90,  rest: 120, step: 15 },
+    intermediate: { rounds: 8, hold: 120, rest: 120, step: 15 },
+    advanced:     { rounds: 8, hold: 150, rest: 120, step: 15 },
+  };
+
+  function fmt(sec) {
+    sec = Math.max(0, Math.round(sec));
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return m + ":" + String(s).padStart(2, "0");
+  }
+
+  function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+
+  function refreshSetupUI() {
+    document.getElementById("roundsVal").textContent = state.rounds;
+    document.getElementById("holdVal").textContent = fmt(state.hold);
+    document.getElementById("restVal").textContent = fmt(state.rest);
+    document.getElementById("stepVal").textContent = state.step + "s";
+    buildSummary();
+  }
+
+  function buildPlan() {
+    const phases = [];
+    phases.push({ type: "prep", label: "Get Ready", duration: 3, round: 0 });
+    for (let r = 1; r <= state.rounds; r++) {
+      const restDur = Math.max(0, state.rest - (r - 1) * state.step);
+      if (restDur > 0) phases.push({ type: "rest", label: "Rest", duration: restDur, round: r });
+      phases.push({ type: "hold", label: "Hold", duration: state.hold, round: r });
+    }
+    phases.push({ type: "done", label: "Complete", duration: 0, round: state.rounds });
+    return phases;
+  }
+
+  function buildSummary() {
+    const plan = buildPlan();
+    const total = plan.reduce((a, p) => a + p.duration, 0);
+    document.getElementById("summary").textContent =
+      state.rounds + " rounds · total session ≈ " + fmt(total) +
+      " · rest ends at " + fmt(Math.max(0, state.rest - (state.rounds - 1) * state.step));
+  }
+
+  document.querySelectorAll("[data-adj]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const key = btn.getAttribute("data-adj");
+      const delta = parseInt(btn.getAttribute("data-delta"), 10);
+      if (key === "rounds") state.rounds = clamp(state.rounds + delta, 1, 20);
+      if (key === "hold") state.hold = clamp(state.hold + delta, 15, 600);
+      if (key === "rest") state.rest = clamp(state.rest + delta, 0, 600);
+      if (key === "step") state.step = clamp(state.step + delta, 0, 60);
+      document.getElementById("preset").value = "custom";
+      refreshSetupUI();
+    });
+  });
+
+  document.getElementById("preset").addEventListener("change", (e) => {
+    const p = presets[e.target.value];
+    if (p) {
+      Object.assign(state, p);
+      refreshSetupUI();
+    }
+  });
+
+  // ---- Audio cues (Web Audio API, no external files) ----
+  let audioCtx = null;
+  function ctx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+  function beep(freq, dur, vol) {
+    try {
+      const ac = ctx();
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.value = vol || 0.15;
+      osc.connect(gain);
+      gain.connect(ac.destination);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+      osc.stop(ac.currentTime + dur + 0.02);
+    } catch (e) { /* audio unavailable */ }
+  }
+  function tickBeep() { beep(880, 0.08, 0.12); }
+  function milestoneBeep() { beep(700, 0.12, 0.16); setTimeout(() => beep(700, 0.12, 0.16), 200); }
+  function phaseStartBeep(type) {
+    if (type === "hold") { beep(520, 0.15, 0.18); setTimeout(() => beep(660, 0.2, 0.18), 160); }
+    else if (type === "rest") { beep(440, 0.18, 0.16); }
+    else if (type === "done") { beep(660, 0.15, 0.2); setTimeout(() => beep(880, 0.3, 0.2), 180); }
+  }
+
+  // ---- Session runner ----
+  let plan = [];
+  let idx = 0;
+  let phaseRemaining = 0;
+  let running = false;
+  let paused = false;
+  let lastTick = 0;
+  let lastWholeSecond = -1;
+  let rafId = null;
+  let wakeLock = null;
+  let contractionLog = {};
+  let roundResults = [];
+
+  const CIRC = 2 * Math.PI * 52;
+
+  function getRestForRound(round) {
+    return Math.max(0, state.rest - (round - 1) * state.step);
+  }
+
+  function setPhaseVisuals(phase) {
+    const label = document.getElementById("phaseLabel");
+    const ring = document.getElementById("ringFg");
+    label.textContent = phase.type === "prep" ? "Get Ready"
+      : phase.type === "rest" ? "Rest"
+      : phase.type === "hold" ? "Breath Hold"
+      : "Complete";
+    label.className = "phase-label " + (phase.type === "hold" ? "hold" : phase.type === "done" ? "done" : "rest");
+    ring.className.baseVal = "ring-fg " + (phase.type === "hold" ? "hold" : "rest");
+    document.getElementById("roundIndicator").textContent =
+      phase.type === "done" ? "Session complete" : "Round " + phase.round + " / " + state.rounds;
+    updateDots(phase);
+    updateContractionBtn(phase);
+    const next = plan[idx + 1];
+    document.getElementById("nextUp").textContent = next && next.type !== "done"
+      ? "Next: " + (next.type === "hold" ? "hold" : "rest") + " " + fmt(next.duration)
+      : "";
+  }
+
+  function updateContractionBtn(phase) {
+    const btn = document.getElementById("contractionBtn");
+    const stopBtn = document.getElementById("stopHoldBtn");
+    if (phase.type !== "hold") {
+      btn.style.display = "none";
+      stopBtn.style.display = "none";
+      return;
+    }
+    btn.style.display = "block";
+    stopBtn.style.display = "block";
+    const logged = contractionLog[phase.round];
+    if (logged !== undefined) {
+      btn.textContent = "Contraction logged at " + fmt(logged) + " — tap or press space to update";
+      btn.classList.add("logged");
+    } else {
+      btn.textContent = "Log contraction start (or press space)";
+      btn.classList.remove("logged");
+    }
+  }
+
+  function logContraction() {
+    const phase = plan[idx];
+    if (!running || paused || !phase || phase.type !== "hold") return;
+    const elapsed = clamp(phase.duration - phaseRemaining, 0, phase.duration);
+    contractionLog[phase.round] = elapsed;
+    updateContractionBtn(phase);
+  }
+
+  let earlyStopElapsed = null;
+  function stopHoldEarly() {
+    const phase = plan[idx];
+    if (!running || paused || !phase || phase.type !== "hold") return;
+    earlyStopElapsed = clamp(phase.duration - phaseRemaining, 0, phase.duration);
+    beep(300, 0.2, 0.18);
+    goToPhase(idx + 1);
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.code === "Space" || e.key === " ") {
+      const phase = plan[idx];
+      if (running && !paused && phase && phase.type === "hold") {
+        e.preventDefault();
+        logContraction();
+      }
+    }
+  });
+
+  function updateDots(phase) {
+    const wrap = document.getElementById("progressDots");
+    wrap.innerHTML = "";
+    for (let r = 1; r <= state.rounds; r++) {
+      const d = document.createElement("div");
+      d.className = "dot" + (r < phase.round ? " filled" : "") + (r === phase.round && phase.type !== "done" ? " current" : "");
+      wrap.appendChild(d);
+    }
+  }
+
+  function renderTime() {
+    document.getElementById("timeDisplay").textContent = fmt(phaseRemaining);
+    const phase = plan[idx];
+    const frac = phase.duration > 0 ? clamp(phaseRemaining / phase.duration, 0, 1) : 0;
+    document.getElementById("ringFg").setAttribute("stroke-dasharray", CIRC);
+    document.getElementById("ringFg").setAttribute("stroke-dashoffset", CIRC * (1 - frac));
+  }
+
+  function goToPhase(i) {
+    const prevPhase = plan[idx];
+    if (prevPhase && prevPhase.type === "hold" && i !== idx) {
+      const stoppedEarly = earlyStopElapsed !== null;
+      roundResults.push({
+        round: prevPhase.round,
+        hold: prevPhase.duration,
+        holdActual: stoppedEarly ? earlyStopElapsed : prevPhase.duration,
+        stoppedEarly: stoppedEarly,
+        rest: getRestForRound(prevPhase.round),
+        contraction: contractionLog[prevPhase.round] !== undefined ? contractionLog[prevPhase.round] : null,
+      });
+      earlyStopElapsed = null;
+    }
+    idx = i;
+    if (idx >= plan.length) { finishSession(); showSummary(); return; }
+    const phase = plan[idx];
+    phaseRemaining = phase.duration;
+    lastWholeSecond = -1;
+    setPhaseVisuals(phase);
+    renderTime();
+    phaseStartBeep(phase.type);
+    if (phase.type === "done") { finishSession(); showSummary(); }
+  }
+
+  function tick(ts) {
+    if (!running || paused) return;
+    if (!lastTick) lastTick = ts;
+    const dt = (ts - lastTick) / 1000;
+    lastTick = ts;
+    phaseRemaining -= dt;
+
+    const whole = Math.ceil(phaseRemaining);
+    if (whole !== lastWholeSecond) {
+      lastWholeSecond = whole;
+      const phase = plan[idx];
+      if (phase.type === "hold" && (whole === 30 || whole === 10)) milestoneBeep();
+      if (whole > 0 && whole <= 3) tickBeep();
+    }
+
+    if (phaseRemaining <= 0) {
+      goToPhase(idx + 1);
+      lastTick = ts;
+    } else {
+      renderTime();
+    }
+    rafId = requestAnimationFrame(tick);
+  }
+
+  async function requestWakeLock() {
+    try {
+      if ("wakeLock" in navigator) wakeLock = await navigator.wakeLock.request("screen");
+    } catch (e) { /* not available */ }
+  }
+  function releaseWakeLock() {
+    if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+  }
+
+  function startSession() {
+    plan = buildPlan();
+    idx = 0;
+    running = true;
+    paused = false;
+    lastTick = 0;
+    contractionLog = {};
+    roundResults = [];
+    document.getElementById("setupView").classList.add("hidden");
+    document.querySelector(".btn-row:not(#summaryBtnRow)").style.display = "none";
+    document.getElementById("summary").style.display = "none";
+    document.getElementById("session").classList.add("active");
+    document.getElementById("liveArea").style.display = "flex";
+    document.getElementById("summaryView").style.display = "none";
+    document.getElementById("summaryBtnRow").style.display = "none";
+    document.getElementById("pauseBtn").textContent = "Pause";
+    requestWakeLock();
+    goToPhase(0);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function finishSession() {
+    running = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    releaseWakeLock();
+  }
+
+  function computeStats() {
+    const totalHold = roundResults.reduce((a, r) => a + r.holdActual, 0);
+    const totalRest = roundResults.reduce((a, r) => a + r.rest, 0);
+    const withContraction = roundResults.filter(r => r.contraction !== null);
+    const avgContraction = withContraction.length
+      ? withContraction.reduce((a, r) => a + r.contraction, 0) / withContraction.length
+      : null;
+    const stoppedEarly = roundResults.filter(r => r.stoppedEarly);
+    return {
+      completed: roundResults.length,
+      totalHold,
+      totalRest,
+      avgContraction,
+      loggedCount: withContraction.length,
+      first: withContraction.length ? withContraction[0] : null,
+      last: withContraction.length ? withContraction[withContraction.length - 1] : null,
+      stoppedEarlyCount: stoppedEarly.length,
+      longestHold: roundResults.length ? Math.max(...roundResults.map(r => r.holdActual)) : null,
+    };
+  }
+
+  function showSummary() {
+    const s = computeStats();
+    document.getElementById("liveArea").style.display = "none";
+    document.getElementById("summaryView").style.display = "block";
+    document.getElementById("summaryBtnRow").style.display = "flex";
+
+    const statGrid = document.getElementById("statGrid");
+    let trendHtml = "—";
+    if (s.first && s.last && s.first !== s.last) {
+      const delta = s.last.contraction - s.first.contraction;
+      trendHtml = (delta >= 0 ? "+" : "−") + fmt(Math.abs(delta)) + " " + (delta >= 0 ? "later" : "earlier");
+    }
+    const roundsLabel = "Rounds completed" + (s.stoppedEarlyCount > 0
+      ? " · " + s.stoppedEarlyCount + " stopped early"
+      : "");
+    statGrid.innerHTML =
+      statBox(s.completed + " / " + state.rounds, roundsLabel) +
+      statBox(fmt(s.totalHold + s.totalRest), "Total session time") +
+      statBox(s.avgContraction !== null ? fmt(s.avgContraction) : "—", "Avg contraction onset") +
+      statBox(s.loggedCount + " / " + s.completed, "Contractions logged") +
+      statBox(s.longestHold !== null ? fmt(s.longestHold) : "—", "Longest hold achieved") +
+      statBox(trendHtml, "First → last onset");
+
+    const table = document.getElementById("roundTable");
+    let rows = "<tr><th>Round</th><th>Hold</th><th>Rest before</th><th>Contraction</th></tr>";
+    roundResults.forEach(r => {
+      const holdCell = r.stoppedEarly
+        ? '<span style="color:var(--danger);font-weight:700;">' + fmt(r.holdActual) + '</span> ' +
+          '<span style="color:var(--muted);font-size:11px;">of ' + fmt(r.hold) + '</span>'
+        : fmt(r.holdActual);
+      rows += "<tr><td>" + r.round + "</td><td>" + holdCell + "</td><td>" + fmt(r.rest) + "</td><td>" +
+        (r.contraction !== null ? fmt(r.contraction) : "—") + "</td></tr>";
+    });
+    table.innerHTML = rows;
+  }
+
+  function statBox(num, lbl) {
+    return '<div class="stat-box"><div class="num">' + num + '</div><div class="lbl">' + lbl + '</div></div>';
+  }
+
+  function endSession() {
+    finishSession();
+    document.getElementById("setupView").classList.remove("hidden");
+    document.querySelector(".btn-row:not(#summaryBtnRow)").style.display = "flex";
+    document.getElementById("summary").style.display = "block";
+    document.getElementById("session").classList.remove("active");
+    document.getElementById("summaryBtnRow").style.display = "none";
+  }
+
+  document.getElementById("startBtn").addEventListener("click", startSession);
+  document.getElementById("stopBtn").addEventListener("click", () => {
+    finishSession();
+    if (roundResults.length > 0) showSummary();
+    else endSession();
+  });
+  document.getElementById("newSessionBtn").addEventListener("click", endSession);
+  document.getElementById("contractionBtn").addEventListener("click", logContraction);
+  document.getElementById("stopHoldBtn").addEventListener("click", stopHoldEarly);
+  document.getElementById("pauseBtn").addEventListener("click", () => {
+    paused = !paused;
+    document.getElementById("pauseBtn").textContent = paused ? "Resume" : "Pause";
+    if (!paused) { lastTick = 0; rafId = requestAnimationFrame(tick); }
+  });
+
+  refreshSetupUI();
+})();
+</script>
+</body>
+</html>
