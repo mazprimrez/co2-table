@@ -375,6 +375,15 @@
         <button type="button" data-adj="step" data-delta="5">+</button>
       </div>
     </div>
+
+    <div class="field">
+      <label>Minimum rest</label>
+      <div class="stepper">
+        <button type="button" data-adj="minRest" data-delta="-5">−</button>
+        <span class="value" id="minRestVal">0:45</span>
+        <button type="button" data-adj="minRest" data-delta="5">+</button>
+      </div>
+    </div>
   </div>
 
   <div class="summary" id="summary"></div>
@@ -429,12 +438,13 @@
     hold: 120,
     rest: 120,
     step: 15,
+    minRest: 45,
   };
 
   const presets = {
-    beginner:     { rounds: 8, hold: 90,  rest: 120, step: 15 },
-    intermediate: { rounds: 8, hold: 120, rest: 120, step: 15 },
-    advanced:     { rounds: 8, hold: 150, rest: 120, step: 15 },
+    beginner:     { rounds: 8, hold: 90,  rest: 120, step: 15, minRest: 60 },
+    intermediate: { rounds: 8, hold: 120, rest: 120, step: 15, minRest: 45 },
+    advanced:     { rounds: 8, hold: 150, rest: 120, step: 15, minRest: 30 },
   };
 
   function fmt(sec) {
@@ -451,14 +461,19 @@
     document.getElementById("holdVal").textContent = fmt(state.hold);
     document.getElementById("restVal").textContent = fmt(state.rest);
     document.getElementById("stepVal").textContent = state.step + "s";
+    document.getElementById("minRestVal").textContent = fmt(state.minRest);
     buildSummary();
+  }
+
+  function restForRoundFromState(round) {
+    return Math.max(state.minRest, state.rest - (round - 1) * state.step);
   }
 
   function buildPlan() {
     const phases = [];
     phases.push({ type: "prep", label: "Get Ready", duration: 3, round: 0 });
     for (let r = 1; r <= state.rounds; r++) {
-      const restDur = Math.max(0, state.rest - (r - 1) * state.step);
+      const restDur = restForRoundFromState(r);
       if (restDur > 0) phases.push({ type: "rest", label: "Rest", duration: restDur, round: r });
       phases.push({ type: "hold", label: "Hold", duration: state.hold, round: r });
     }
@@ -471,7 +486,7 @@
     const total = plan.reduce((a, p) => a + p.duration, 0);
     document.getElementById("summary").textContent =
       state.rounds + " rounds · total session ≈ " + fmt(total) +
-      " · rest ends at " + fmt(Math.max(0, state.rest - (state.rounds - 1) * state.step));
+      " · rest floors at " + fmt(state.minRest);
   }
 
   document.querySelectorAll("[data-adj]").forEach(btn => {
@@ -482,6 +497,7 @@
       if (key === "hold") state.hold = clamp(state.hold + delta, 15, 600);
       if (key === "rest") state.rest = clamp(state.rest + delta, 0, 600);
       if (key === "step") state.step = clamp(state.step + delta, 0, 60);
+      if (key === "minRest") state.minRest = clamp(state.minRest + delta, 0, 600);
       document.getElementById("preset").value = "custom";
       refreshSetupUI();
     });
@@ -540,7 +556,7 @@
   const CIRC = 2 * Math.PI * 52;
 
   function getRestForRound(round) {
-    return Math.max(0, state.rest - (round - 1) * state.step);
+    return restForRoundFromState(round);
   }
 
   function setPhaseVisuals(phase) {
