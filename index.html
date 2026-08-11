@@ -4,18 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>CO2 Table — Breath-Hold Trainer</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ec7fa9' d='M12 2C12 2 4 12.5 4 16a8 8 0 0 0 16 0C20 12.5 12 2 12 2z'/%3E%3C/svg%3E">
 <style>
   :root {
-    --bg: #fff2f6;
-    --bg2: #ffe1ec;
+    --bg: #ffffff;
+    --bg2: #fdf1f6;
     --panel: #ffffff;
-    --panel-border: #f6c9da;
-    --text: #5a2740;
-    --muted: #b17c92;
-    --accent: #ef7fa8;
-    --accent-dim: #d85b8a;
-    --rest: #f0a8c4;
-    --hold: #d94f80;
+    --panel-border: #f0d7e2;
+    --text: #362027;
+    --muted: #9a7d87;
+    --accent: #ec7fa9;
+    --accent-dim: #d85f8d;
+    --rest: #f3b8cf;
+    --hold: #df5a90;
     --done: #b15b91;
     --danger: #d1495b;
   }
@@ -23,7 +24,7 @@
   html, body {
     margin: 0;
     height: 100%;
-    background: radial-gradient(ellipse at top, var(--bg2), var(--bg) 70%);
+    background: var(--bg);
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -33,22 +34,23 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 24px 16px 40px;
+    justify-content: center;
+    padding: 32px 16px 40px;
   }
   header {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
   }
   header h1 {
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
     margin: 0 0 4px;
   }
   header p {
     margin: 0;
     color: var(--muted);
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .card {
@@ -56,7 +58,7 @@
     max-width: 480px;
     background: var(--panel);
     border: 1px solid var(--panel-border);
-    border-radius: 16px;
+    border-radius: 14px;
     padding: 20px;
     margin-bottom: 16px;
   }
@@ -87,20 +89,20 @@
     gap: 8px;
   }
   .stepper button {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     border-radius: 8px;
     border: 1px solid var(--panel-border);
-    background: var(--bg2);
+    background: var(--panel);
     color: var(--text);
-    font-size: 18px;
+    font-size: 16px;
     line-height: 1;
     cursor: pointer;
   }
-  .stepper button:active { background: var(--accent-dim); }
+  .stepper button:active { background: var(--bg2); }
 
   select {
-    background: var(--bg2);
+    background: var(--panel);
     color: var(--text);
     border: 1px solid var(--panel-border);
     border-radius: 8px;
@@ -124,22 +126,22 @@
   }
   button.primary {
     flex: 1;
-    background: linear-gradient(180deg, var(--accent), var(--accent-dim));
-    color: #fff6fa;
+    background: var(--accent);
+    color: #ffffff;
     border: none;
-    border-radius: 12px;
-    padding: 16px;
-    font-size: 17px;
-    font-weight: 700;
+    border-radius: 10px;
+    padding: 15px;
+    font-size: 16px;
+    font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 4px 14px rgba(217, 79, 128, 0.25);
   }
+  button.primary:active { background: var(--accent-dim); }
   button.secondary {
     background: var(--panel);
     color: var(--text);
     border: 1px solid var(--panel-border);
-    border-radius: 12px;
-    padding: 16px;
+    border-radius: 10px;
+    padding: 15px;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
@@ -151,7 +153,7 @@
   #setupView.hidden { display: none; }
 
   .round-indicator {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--muted);
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -161,8 +163,7 @@
   .phase-label {
     font-size: 20px;
     font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    letter-spacing: 0.02em;
     margin-bottom: 6px;
     transition: color 0.3s;
   }
@@ -177,8 +178,8 @@
     margin: 12px 0 20px;
   }
   .ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-  .ring-bg { fill: none; stroke: var(--panel-border); stroke-width: 10; }
-  .ring-fg { fill: none; stroke: var(--accent); stroke-width: 10; stroke-linecap: round; transition: stroke 0.3s; }
+  .ring-bg { fill: none; stroke: var(--panel-border); stroke-width: 8; }
+  .ring-fg { fill: none; stroke: var(--accent); stroke-width: 8; stroke-linecap: round; transition: stroke 0.3s; }
   .ring-fg.rest { stroke: var(--rest); }
   .ring-fg.hold { stroke: var(--hold); }
 
@@ -214,49 +215,47 @@
     margin-bottom: 18px;
   }
   .dot {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background: var(--panel-border);
   }
   .dot.filled { background: var(--accent); }
-  .dot.current { background: var(--hold); box-shadow: 0 0 0 3px rgba(217,79,128,0.25); }
+  .dot.current { background: var(--hold); box-shadow: 0 0 0 3px rgba(223,90,144,0.2); }
 
   .contraction-btn {
     display: none;
-    background: var(--bg2);
+    background: var(--panel);
     color: var(--hold);
-    border: 1.5px dashed var(--hold);
-    border-radius: 12px;
+    border: 1px solid var(--hold);
+    border-radius: 10px;
     padding: 12px 18px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     width: 100%;
     max-width: 320px;
   }
   .contraction-btn.logged {
-    border-style: solid;
-    background: rgba(217, 79, 128, 0.12);
+    background: var(--bg2);
   }
 
   .stop-hold-btn {
     display: none;
     background: var(--danger);
-    color: #fff6f6;
+    color: #ffffff;
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     padding: 13px 18px;
     font-size: 15px;
-    font-weight: 700;
+    font-weight: 600;
     cursor: pointer;
     margin-bottom: 12px;
     width: 100%;
     max-width: 320px;
-    box-shadow: 0 4px 14px rgba(209, 73, 91, 0.3);
   }
-  .stop-hold-btn:active { opacity: 0.85; }
+  .stop-hold-btn:active { background: #b8394a; }
 
   #summaryView { display: none; width: 100%; }
   .stat-grid {
@@ -267,7 +266,8 @@
   }
   .stat-box {
     background: var(--bg2);
-    border-radius: 12px;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
     padding: 12px;
     text-align: center;
   }
@@ -294,6 +294,9 @@
     text-align: left;
     color: var(--muted);
     font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
     padding: 6px 8px;
     border-bottom: 1px solid var(--panel-border);
   }
@@ -412,7 +415,7 @@
   </div>
 
   <footer>
-    Rest phases count down in light pink, breath holds in rose. Sound cues mark 30s and 10s remaining, the final 3 seconds, and every phase change. Tap "Log contraction start" (or press Space) the moment you feel your first diaphragm contraction during a hold. If you can't hold any longer, tap "stop" — it ends the hold immediately and moves you into rest. Keep this tab in the foreground for accurate timing.
+    Tap "Log contraction start" (or press Space) the moment you feel one. If you can't hold any longer, tap "stop" — it ends the hold and moves you into rest. Sound cues mark 30s and 10s left, and the final 3 seconds of every hold. Keep this tab in the foreground for accurate timing.
   </footer>
 </div>
 
