@@ -264,6 +264,7 @@
     gap: 10px;
     margin-bottom: 18px;
   }
+  .stat-box:last-child:nth-child(odd) { grid-column: span 2; }
   .stat-box {
     background: var(--bg2);
     border: 1px solid var(--panel-border);
@@ -711,6 +712,13 @@
     releaseWakeLock();
   }
 
+  function struggleRatio(r) {
+    const hold = Math.round(r.holdActual);
+    if (hold <= 0) return null;
+    const onset = r.contraction !== null ? Math.round(r.contraction) : hold;
+    return (hold - onset) / hold;
+  }
+
   function computeStats() {
     const totalHold = roundResults.reduce((a, r) => a + r.holdActual, 0);
     const totalRest = roundResults.reduce((a, r) => a + r.rest, 0);
@@ -718,12 +726,17 @@
     const avgContraction = withContraction.length
       ? withContraction.reduce((a, r) => a + r.contraction, 0) / withContraction.length
       : null;
+    const struggleRatios = roundResults.map(struggleRatio).filter(v => v !== null);
+    const avgStruggleRatio = struggleRatios.length
+      ? struggleRatios.reduce((a, v) => a + v, 0) / struggleRatios.length
+      : null;
     const stoppedEarly = roundResults.filter(r => r.stoppedEarly);
     return {
       completed: roundResults.length,
       totalHold,
       totalRest,
       avgContraction,
+      avgStruggleRatio,
       loggedCount: withContraction.length,
       first: withContraction.length ? withContraction[0] : null,
       last: withContraction.length ? withContraction[withContraction.length - 1] : null,
@@ -741,8 +754,10 @@
     const statGrid = document.getElementById("statGrid");
     let trendHtml = "—";
     if (s.first && s.last && s.first !== s.last) {
-      const delta = s.last.contraction - s.first.contraction;
-      trendHtml = (delta >= 0 ? "+" : "−") + fmt(Math.abs(delta)) + " " + (delta >= 0 ? "later" : "earlier");
+      const delta = Math.round(s.last.contraction) - Math.round(s.first.contraction);
+      trendHtml = delta === 0
+        ? "≈ same"
+        : (delta > 0 ? "+" : "−") + fmt(Math.abs(delta)) + " " + (delta > 0 ? "later" : "earlier");
     }
     const roundsLabel = "Rounds completed" + (s.stoppedEarlyCount > 0
       ? " · " + s.stoppedEarlyCount + " stopped early"
@@ -753,17 +768,20 @@
       statBox(s.avgContraction !== null ? fmt(s.avgContraction) : "—", "Avg contraction onset") +
       statBox(s.loggedCount + " / " + s.completed, "Contractions logged") +
       statBox(s.longestHold !== null ? fmt(s.longestHold) : "—", "Longest hold achieved") +
-      statBox(trendHtml, "First → last onset");
+      statBox(trendHtml, "First → last onset") +
+      statBox(s.avgStruggleRatio !== null ? Math.round(s.avgStruggleRatio * 100) + "%" : "—", "Struggle-phase ratio");
 
     const table = document.getElementById("roundTable");
-    let rows = "<tr><th>Round</th><th>Hold</th><th>Rest before</th><th>Contraction</th></tr>";
+    let rows = "<tr><th>Round</th><th>Hold</th><th>Rest before</th><th>Contraction</th><th>Struggle %</th></tr>";
     roundResults.forEach(r => {
       const holdCell = r.stoppedEarly
         ? '<span style="color:var(--danger);font-weight:700;">' + fmt(r.holdActual) + '</span> ' +
           '<span style="color:var(--muted);font-size:11px;">of ' + fmt(r.hold) + '</span>'
         : fmt(r.holdActual);
+      const ratio = struggleRatio(r);
       rows += "<tr><td>" + r.round + "</td><td>" + holdCell + "</td><td>" + fmt(r.rest) + "</td><td>" +
-        (r.contraction !== null ? fmt(r.contraction) : "—") + "</td></tr>";
+        (r.contraction !== null ? fmt(r.contraction) : "—") + "</td><td>" +
+        (ratio !== null ? Math.round(ratio * 100) + "%" : "—") + "</td></tr>";
     });
     table.innerHTML = rows;
   }
